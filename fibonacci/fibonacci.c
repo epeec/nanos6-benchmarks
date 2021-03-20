@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <nanos6/debug.h>
 
-#pragma oss task out(fn[0]) label(fibo)
+#pragma oss task out(fn[0]) label("fibo")
 void fibonacci(size_t n, size_t *fn)
 {
 	if (n <= 1) {
@@ -41,7 +41,7 @@ void check_result(size_t n, size_t *fn)
 	if (fn_serial == *fn) {
 		printf("SUCCESS\n");
 	} else {
-		printf("FAILED (EXPECTED:%d GOT:%d)\n", fn_serial, *fn);
+		printf("FAILED (EXPECTED:%lu GOT:%lu)\n", fn_serial, *fn);
 	}
 }
 

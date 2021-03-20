@@ -35,7 +35,7 @@ void init(size_t N, double *vector, double value)
 
 void check_result(size_t N, double *x, double alpha, double *y, size_t ITER)
 {
-	double *y_serial = lmalloc_double(N);
+	double *y_serial = (double*)nanos6_lmalloc(N * sizeof(double));
 	init(N, y_serial, 0);
 	
 	for (size_t iter = 0; iter < ITER; ++iter) {
@@ -45,13 +45,13 @@ void check_result(size_t N, double *x, double alpha, double *y, size_t ITER)
 	for (size_t i = 0; i < N; ++i) {
 		if (y_serial[i] != y[i]) {
 			printf("FAILED\n");
-			lfree_double(y_serial, N);
+			nanos6_lfree(y_serial, N * sizeof(double));
 			return;
 		}
 	}
 	
 	printf("SUCCESS\n");
-	lfree_double(y_serial, N);
+	nanos6_lfree(y_serial, N * sizeof(double));
 }
 
 void usage()
@@ -87,21 +87,21 @@ int main(int argc, char *argv[])
 		check = atoi(argv[4]);
 	}
 	
-	x = dmalloc_double(N, nanos6_equpart_distribution, 0, NULL);
-	y = dmalloc_double(N, nanos6_equpart_distribution, 0, NULL);
+	x = (double*)nanos6_dmalloc(N * sizeof(double), nanos6_equpart_distribution, 0, NULL);
+	y = (double*)nanos6_dmalloc(N * sizeof(double), nanos6_equpart_distribution, 0, NULL);
 	
 	clock_gettime(CLOCK_MONOTONIC, &tp_start);
 	
-	#pragma oss task out(y[0;N]) label(initialize y)
+	#pragma oss task out(y[0;N]) label("initialize y")
 	init(N, y, 0);
 	
-	#pragma oss task out(x[0;N]) label(initialize x)
+	#pragma oss task out(x[0;N]) label("initialize x")
 	init(N, x, 42);
 	
 	for (size_t iter = 0; iter < ITER; ++iter) {
 		for (size_t i = 0; i < N; i += TS) {
 			#pragma oss task in(x[i;TS]) inout(y[i;TS]) \
-				label(daxpy task)
+				label("daxpy task")
 			daxpy(TS, x + i, alpha, y + i); 
 		}
 	}
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
 	clock_gettime(CLOCK_MONOTONIC, &tp_end);
 	
 	if (check) {
-		#pragma oss task in(x[0;N]) inout(y[0;N]) label(check result)
+		#pragma oss task in(x[0;N]) inout(y[0;N]) label("check result")
 		check_result(N, x, alpha, y, ITER);
 	
 		#pragma oss taskwait
@@ -131,8 +131,8 @@ int main(int argc, char *argv[])
 		N, TS, ITER, nanos6_get_num_cluster_nodes(), nanos6_get_num_cpus(),
 		time_msec, mflops);
 	
-	dfree_double(x, N);
-	dfree_double(y, N);
+	nanos6_dfree(x, N * sizeof(double));
+	nanos6_dfree(y, N * sizeof(double));
 	
 	return 0;
 
